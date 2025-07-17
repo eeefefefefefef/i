@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>لعبة الكورة والعامود</title>
+<style>
+  body {
+    margin: 0;
+    background-color: #000;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: white;
+    user-select: none;
+  }
+  canvas {
+    display: block;
+    margin: 0 auto;
+    background-color: #000;
+    touch-action: none;
+  }
+  #score {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2rem;
+    color: white;
+    font-weight: bold;
+    text-shadow: 0 0 10px white;
+  }
+  #gameOverOverlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  #gameOverOverlay.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #gameOverOverlay h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+  }
+  #retryBtn {
+    padding: 1rem 2rem;
+    font-size: 1.5rem;
+    background: white;
+    color: black;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  #retryBtn:hover {
+    background: #ccc;
+  }
+</style>
+</head>
+<body>
+
+<div id="score">Score: 0</div>
+<canvas id="gameCanvas"></canvas>
+
+<div id="gameOverOverlay">
+  <h1>لقد خسرت</h1>
+  <button id="retryBtn">إعادة اللعب</button>
+</div>
+
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const scoreDisplay = document.getElementById('score');
+
+  // ضبط حجم الكانفس
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const paddle = {
+    width: 120,
+    height: 15,
+    x: canvas.width / 2 - 60,
+    y: canvas.height - 40,
+    speed: 12,
+    dx: 0
+  };
+
+  const ball = {
+    x: canvas.width / 2,
+    y: canvas.height / 3,
+    radius: 12,
+    speedX: 6,
+    speedY: 6
+  };
+
+  const gameOverOverlay = document.getElementById('gameOverOverlay');
+  const retryBtn = document.getElementById('retryBtn');
+
+  let isGameOver = false;
+  let score = 0;
+
+  function drawPaddle() {
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'white';
+    ctx.shadowBlur = 15;
+    ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+  }
+
+  function drawBall() {
+    ctx.beginPath();
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'white';
+    ctx.shadowBlur = 20;
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.closePath();
+  }
+
+  function movePaddle() {
+    paddle.x += paddle.dx;
+    if (paddle.x < 0) paddle.x = 0;
+    if (paddle.x + paddle.width > canvas.width) paddle.x = canvas.width - paddle.width;
+  }
+
+  function moveBall() {
+    ball.x += ball.speedX;
+    ball.y += ball.speedY;
+
+    if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) {
+      ball.speedX = -ball.speedX;
+    }
+
+    if (ball.y - ball.radius < 0) {
+      ball.speedY = -ball.speedY;
+    }
+
+    if (
+      ball.y + ball.radius > paddle.y &&
+      ball.x > paddle.x &&
+      ball.x < paddle.x + paddle.width
+    ) {
+      ball.speedY = -ball.speedY;
+      ball.speedX *= 1.05;
+      ball.speedY *= 1.05;
+
+      // زيادة النقاط
+      score++;
+      scoreDisplay.textContent = `Score: ${score}`;
+    }
+
+    if (ball.y - ball.radius > canvas.height) {
+      endGame();
+    }
+  }
+
+  function clear() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function draw() {
+    clear();
+    drawPaddle();
+    drawBall();
+  }
+
+  function update() {
+    if (isGameOver) return;
+    movePaddle();
+    moveBall();
+    draw();
+    requestAnimationFrame(update);
+  }
+
+  function mouseMoveHandler(e) {
+    const rect = canvas.getBoundingClientRect();
+    paddle.x = e.clientX - rect.left - paddle.width / 2;
+  }
+
+  function touchMoveHandler(e) {
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    paddle.x = touch.clientX - rect.left - paddle.width / 2;
+  }
+
+  function resetGame() {
+    isGameOver = false;
+    score = 0;
+    scoreDisplay.textContent = `Score: ${score}`;
+    ball.x = canvas.width / 2;
+    ball.y = canvas.height / 3;
+    ball.speedX = 6;
+    ball.speedY = 6;
+    paddle.x = canvas.width / 2 - paddle.width / 2;
+    gameOverOverlay.classList.remove('show');
+    update();
+  }
+
+  function endGame() {
+    isGameOver = true;
+    gameOverOverlay.classList.add('show');
+  }
+
+  canvas.addEventListener('mousemove', mouseMoveHandler);
+  canvas.addEventListener('touchmove', touchMoveHandler, { passive: false });
+  retryBtn.addEventListener('click', resetGame);
+
+  update();
+</script>
+
+</body>
+</html>
